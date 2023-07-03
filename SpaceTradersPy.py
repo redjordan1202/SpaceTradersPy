@@ -21,7 +21,7 @@ class SpaceTrader:
             )
             agent_info = self.get_agent()
             self.callsign = agent_info["symbol"]
-            self.callsign = agent_info["headquarters"]
+            self.headquarters = agent_info["headquarters"]
             self.starting_faction = agent_info["startingFaction"]
             self.credits = agent_info["credits"]
         else:
@@ -50,12 +50,13 @@ class SpaceTrader:
         r = requests.post(url=url, headers=header, data=json.dumps(payload))
 
         if r.status_code == 200:
-            agent_info = r.json()["data"]
-            self.token = agent_info["token"]
-            self.callsign = agent_info["symbol"]
-            self.callsign = agent_info["headquarters"]
-            self.starting_faction = agent_info["startingFaction"]
-            self.credits = agent_info["credits"]
+            agent_info = r.json()
+            print(agent_info)
+            self.token = agent_info["data"]["token"]
+            self.callsign = agent_info["data"]["symbol"]
+            self.callsign = agent_info["data"]["headquarters"]
+            self.starting_faction = agent_info["data"]["startingFaction"]
+            self.credits = agent_info["data"]["credits"]
         elif r.status_code == 409:
             raise AgentSymbolTaken(callsign=callsign)
         elif r.status_code == 401:
@@ -241,6 +242,7 @@ class SpaceTrader:
         r = requests.post(url, headers=self.header, data=data)
         if r.status_code == 200:
             ship_info = r.json()
+            self.credits = ship_info["agent"]["credits"]
             return ship_info["data"]
         elif r.status_code == 401:
             raise TokenError()
