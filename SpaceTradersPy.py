@@ -7,6 +7,9 @@ class SpaceTrader:
     token = None
     header = None
     callsign = None
+    headquarters = None
+    starting_faction = None
+    credits = None
     error = None
 
     def __init__(self, token=None, callsign=None):
@@ -16,7 +19,11 @@ class SpaceTrader:
                 Accept="application/json",
                 Authorization=f"Bearer {self.token}"
             )
-            self.callsign = self.get_agent()["symbol"]
+            agent_info = self.get_agent()
+            self.callsign = agent_info["symbol"]
+            self.callsign = agent_info["headquarters"]
+            self.starting_faction = agent_info["startingFaction"]
+            self.credits = agent_info["credits"]
         else:
             if callsign:
                 self.register_agent(callsign)
@@ -43,8 +50,12 @@ class SpaceTrader:
         r = requests.post(url=url, headers=header, data=json.dumps(payload))
 
         if r.status_code == 200:
-            json_response = r.json()
-            self.token = json_response["data"]["token"]
+            agent_info = r.json()["data"]
+            self.token = agent_info["token"]
+            self.callsign = agent_info["symbol"]
+            self.callsign = agent_info["headquarters"]
+            self.starting_faction = agent_info["startingFaction"]
+            self.credits = agent_info["credits"]
         elif r.status_code == 409:
             raise AgentSymbolTaken(callsign=callsign)
         elif r.status_code == 401:
