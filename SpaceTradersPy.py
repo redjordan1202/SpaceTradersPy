@@ -21,7 +21,14 @@ class SpaceTrader:
             )
             agent_info = self.get_agent()
             self.callsign = agent_info["symbol"]
-            self.headquarters = agent_info["headquarters"]
+            headquarters_waypoint = agent_info["headquarters"]
+            headquarters_system = (
+                headquarters_waypoint.split("-")[0] + "-" + headquarters_waypoint.split("-")[1]
+            )
+            self.headquarters = self.get_waypoint(
+                waypoint= headquarters_waypoint,
+                system = headquarters_system
+            )
             self.starting_faction = agent_info["startingFaction"]
             self.credits = agent_info["credits"]
         else:
@@ -54,7 +61,15 @@ class SpaceTrader:
             print(agent_info)
             self.token = agent_info["data"]["token"]
             self.callsign = agent_info["data"]["symbol"]
-            self.callsign = agent_info["data"]["headquarters"]
+            headquarters_waypoint = agent_info["data"]["headquarters"]
+            headquarters_system = (
+                    headquarters_waypoint.split("-")[0] + "-" + headquarters_waypoint.split("-")[1]
+            )
+            headquarters_info = self.get_waypoint(
+                waypoint=headquarters_waypoint,
+                system=headquarters_system
+            )
+            self.headquarters = Waypoint(headquarters_info)
             self.starting_faction = agent_info["data"]["startingFaction"]
             self.credits = agent_info["data"]["credits"]
         elif r.status_code == 409:
@@ -98,7 +113,7 @@ class SpaceTrader:
 
         if r.status_code == 200:
             contract_list = r.json()
-            return contract_list["data"]
+            return contract_list["data"][0]
         elif r.status_code == 401:
             raise TokenError()
         elif r.status_code == 404:
@@ -180,7 +195,7 @@ class SpaceTrader:
         r = requests.get(url, headers=self.header, params=params)
         if r.status_code == 200:
             factions_list = r.json()
-            return factions_list["data"]
+            return factions_list["data"][0]
         elif r.status_code == 401:
             raise TokenError()
         elif r.status_code == 404:
@@ -195,7 +210,7 @@ class SpaceTrader:
         r = requests.get(url, headers=self.header)
         if r.status_code == 200:
             faction_info = r.json()
-            return faction_info["data"]
+            return faction_info["data"][0]
         elif r.status_code == 401:
             raise TokenError()
         elif r.status_code == 404:
@@ -221,8 +236,12 @@ class SpaceTrader:
 
         r = requests.get(url, headers=self.header, params=params)
         if r.status_code == 200:
-            ship_list = r.json()
-            return ship_list["data"]
+            response_list = r.json()
+            ship_list = []
+            for ship in response_list["data"]:
+                s = Ship(symbol=ship["symbol"],ship_info=ship)
+                ship_list.append(s)
+            return ship_list
         elif r.status_code == 401:
             raise TokenError()
         elif r.status_code == 404:
@@ -242,15 +261,19 @@ class SpaceTrader:
         r = requests.post(url, headers=self.header, data=data)
         if r.status_code == 200:
             ship_info = r.json()
+            ship = Ship(
+                symbol=ship_info["ship"]["symbol"],
+                ship_info=ship_info["ship"]
+            )
             self.credits = ship_info["agent"]["credits"]
-            return ship_info["data"]
+            return ship
         elif r.status_code == 401:
             raise TokenError()
         elif r.status_code == 404:
             raise ResourceNotFound()
         else:
             self.error = r.json()
-            return self.error
+            return None
 
     def get_ship(self, ship_id):
         url = self.BASE_URL + f"my/ships/{ship_id}"
@@ -258,14 +281,18 @@ class SpaceTrader:
         r = requests.get(url, headers=self.header)
         if r.status_code == 200:
             ship_info = r.json()
-            return ship_info["data"]
+            ship = Ship(
+                symbol=ship_info["data"]["symbol"],
+                ship_info=ship_info["data"]
+            )
+            return ship
         elif r.status_code == 401:
             raise TokenError()
         elif r.status_code == 404:
             raise ResourceNotFound()
         else:
             self.error = r.json()
-            return self.error
+            return None
 
     def get_ship_cargo(self, ship_id):
         url = self.BASE_URL + f"my/ships/{ship_id}/cargo"
@@ -295,7 +322,7 @@ class SpaceTrader:
             raise ResourceNotFound()
         else:
             self.error = r.json()
-            return self.error
+            return None
 
     def refine_material(self, ship_id):
         url = self.BASE_URL + f"my/ships/{ship_id}/refine"
@@ -310,7 +337,7 @@ class SpaceTrader:
             raise ResourceNotFound()
         else:
             self.error = r.json()
-            return self.error
+            return None
 
     def create_chart(self, ship_id):
         url = self.BASE_URL + f"my/ships/{ship_id}/chart"
@@ -325,7 +352,7 @@ class SpaceTrader:
             raise ResourceNotFound()
         else:
             self.error = r.json()
-            return self.error
+            return None
 
     def get_ship_cooldown(self, ship_id):
         url = self.BASE_URL + f"my/ships/{ship_id}/cooldown"
@@ -340,7 +367,7 @@ class SpaceTrader:
             raise ResourceNotFound()
         else:
             self.error = r.json()
-            return self.error
+            return None
 
     def dock_ship(self, ship_id):
         url = self.BASE_URL + f"my/ships/{ship_id}/dock"
@@ -355,7 +382,7 @@ class SpaceTrader:
             raise ResourceNotFound()
         else:
             self.error = r.json()
-            return self.error
+            return None
 
     def create_survey(self, ship_id):
         url = self.BASE_URL + f"my/ships/{ship_id}/survey"
@@ -370,7 +397,7 @@ class SpaceTrader:
             raise ResourceNotFound()
         else:
             self.error = r.json()
-            return self.error
+            return None
 
     def extract_resources(self, ship_id):
         url = self.BASE_URL + f"my/ships/{ship_id}/extract"
@@ -385,7 +412,7 @@ class SpaceTrader:
             raise ResourceNotFound()
         else:
             self.error = r.json()
-            return self.error
+            return None
 
     def jettison_cargo(self, ship_id, cargo, quantity):
         url = self.BASE_URL + f"my/ships/{ship_id}/jettison"
@@ -405,7 +432,7 @@ class SpaceTrader:
             raise ResourceNotFound()
         else:
             self.error = r.json()
-            return self.error
+            return None
 
     def jump_ship(self, ship_id, system):
         url = self.BASE_URL + f"my/ships/{ship_id}/jump"
@@ -422,7 +449,7 @@ class SpaceTrader:
             raise ResourceNotFound()
         else:
             self.error = r.json()
-            return self.error
+            return None
 
     def navigate_ship(self, ship_id, system):
         url = self.BASE_URL + f"my/ships/{ship_id}/jump"
@@ -439,7 +466,7 @@ class SpaceTrader:
             raise ResourceNotFound()
         else:
             self.error = r.json()
-            return self.error
+            return None
 
     def patch_ship_nav(self, ship_id, flight_mode):
         url = self.BASE_URL + f"my/ships/{ship_id}/nav"
@@ -456,7 +483,7 @@ class SpaceTrader:
             raise ResourceNotFound()
         else:
             self.error = r.json()
-            return self.error
+            return None
 
     def get_ship_nav(self, ship_id):
         url = self.BASE_URL + f"my/ships/{ship_id}/nav"
@@ -471,7 +498,7 @@ class SpaceTrader:
             raise ResourceNotFound()
         else:
             self.error = r.json()
-            return self.error
+            return None
 
     def warp_ship(self, ship_id, waypoint):
         url = self.BASE_URL + f"my/ships/{ship_id}/jump"
@@ -488,7 +515,7 @@ class SpaceTrader:
             raise ResourceNotFound()
         else:
             self.error = r.json()
-            return self.error
+            return None
 
     def sell_cargo(self, ship_id, cargo, quantity):
         url = self.BASE_URL + f"my/ships/{ship_id}/sell"
@@ -508,7 +535,7 @@ class SpaceTrader:
             raise ResourceNotFound()
         else:
             self.error = r.json()
-            return self.error
+            return None
 
     def scan_systems(self, ship_id):
         url = self.BASE_URL + f"my/ships/{ship_id}/scan/systems"
@@ -523,7 +550,7 @@ class SpaceTrader:
             raise ResourceNotFound()
         else:
             self.error = r.json()
-            return self.error
+            return None
 
     def scan_waypoints(self, ship_id):
         url = self.BASE_URL + f"my/ships/{ship_id}/scan/waypoints"
@@ -538,7 +565,7 @@ class SpaceTrader:
             raise ResourceNotFound()
         else:
             self.error = r.json()
-            return self.error
+            return None
 
     def scan_ships(self, ship_id):
         url = self.BASE_URL + f"my/ships/{ship_id}/scan/ships"
@@ -553,7 +580,7 @@ class SpaceTrader:
             raise ResourceNotFound()
         else:
             self.error = r.json()
-            return self.error
+            return None
 
     def refuel_ship(self, ship_id, quantity):
         url = self.BASE_URL + f"my/ships/{ship_id}/refuel"
@@ -570,7 +597,7 @@ class SpaceTrader:
             raise ResourceNotFound()
         else:
             self.error = r.json()
-            return self.error
+            return None
 
     def purchase_cargo(self, ship_id, cargo, quantity):
         url = self.BASE_URL + f"my/ships/{ship_id}/purchase"
@@ -590,7 +617,7 @@ class SpaceTrader:
             raise ResourceNotFound()
         else:
             self.error = r.json()
-            return self.error
+            return None
 
     def transfer_cargo(self, ship_id, cargo, quantity, recipient):
         url = self.BASE_URL + f"my/ships/{ship_id}/transfer"
@@ -611,7 +638,7 @@ class SpaceTrader:
             raise ResourceNotFound()
         else:
             self.error = r.json()
-            return self.error
+            return None
 
     def negotiate_contract(self, ship_id):
         url = self.BASE_URL + f"my/ships/{ship_id}/negotiate/contract"
@@ -626,7 +653,7 @@ class SpaceTrader:
             raise ResourceNotFound()
         else:
             self.error = r.json()
-            return self.error
+            return None
 
     def get_mounts(self, ship_id):
         url = self.BASE_URL + f"my/ships/{ship_id}/mounts"
@@ -641,7 +668,7 @@ class SpaceTrader:
             raise ResourceNotFound()
         else:
             self.error = r.json()
-            return self.error
+            return None
 
     def install_mount(self, ship_id, mount):
         url = self.BASE_URL + f"my/ships/{ship_id}/mount/install"
@@ -658,7 +685,7 @@ class SpaceTrader:
             raise ResourceNotFound()
         else:
             self.error = r.json()
-            return self.error
+            return None
 
     def remove_mount(self, ship_id, mount):
         url = self.BASE_URL + f"my/ships/{ship_id}/mount/remove"
@@ -675,7 +702,7 @@ class SpaceTrader:
             raise ResourceNotFound()
         else:
             self.error = r.json()
-            return self.error
+            return None
 
     # System Functions
     def list_systems(self, limit=10, page=1):
@@ -694,33 +721,38 @@ class SpaceTrader:
 
         r = requests.get(url, headers=self.header, params=params)
         if r.status_code == 200:
-            system_list = r.json()
-            return system_list["data"]
+            systems = r.json()
+            system_list = []
+            for i in systems["data"]:
+                system = System(i)
+                system_list.append(system)
+            return system_list
         elif r.status_code == 401:
             raise TokenError()
         elif r.status_code == 404:
             raise ResourceNotFound()
         else:
             self.error = r.json()
-            return self.error
+            return None
 
     def get_system(self, system):
-        url = self.BASE_URL + f"systems/X1-{system}"
+        url = self.BASE_URL + f"systems/{system}"
 
         r = requests.get(url, headers=self.header)
         if r.status_code == 200:
             system_info = r.json()
-            return system_info["data"]
+            system = System(system_info["data"])
+            return system
         elif r.status_code == 401:
             raise TokenError()
         elif r.status_code == 404:
             raise ResourceNotFound()
         else:
             self.error = r.json()
-            return self.error
+            return None
 
     def list_waypoints_in_system(self, system, limit=10, page=1):
-        url = self.BASE_URL + f"systems/X1-{system}/waypoints"
+        url = self.BASE_URL + f"systems/{system}/waypoints"
 
         if limit > 20:
             limit = 20
@@ -735,8 +767,12 @@ class SpaceTrader:
 
         r = requests.get(url, headers=self.header, params=params)
         if r.status_code == 200:
-            waypoint_list = r.json()
-            return waypoint_list["data"]
+            waypoints = r.json()
+            waypoint_list = []
+            for wp in waypoints["data"]:
+                waypoint = Waypoint(wp)
+                waypoint_list.append(waypoint)
+            return waypoint_list
         elif r.status_code == 401:
             raise TokenError()
         elif r.status_code == 404:
@@ -746,12 +782,12 @@ class SpaceTrader:
             return self.error
 
     def get_waypoint(self, system, waypoint):
-        url = self.BASE_URL + f"systems/X1-{system}/waypoints/X1-{system}-{waypoint}"
+        url = self.BASE_URL + f"systems/{system}/waypoints/{waypoint}/"
 
         r = requests.get(url, headers=self.header)
         if r.status_code == 200:
             waypoint_info = r.json()
-            return waypoint_info["data"]
+            return Waypoint(waypoint_info["data"])
         elif r.status_code == 401:
             raise TokenError()
         elif r.status_code == 404:
@@ -761,7 +797,7 @@ class SpaceTrader:
             return self.error
 
     def get_market(self, system, waypoint):
-        url = self.BASE_URL + f"systems/X1-{system}/waypoints/X1-{system}-{waypoint}/market"
+        url = self.BASE_URL + f"systems/{system}/waypoints/{waypoint}/market"
 
         r = requests.get(url, headers=self.header)
         if r.status_code == 200:
@@ -773,10 +809,10 @@ class SpaceTrader:
             raise ResourceNotFound()
         else:
             self.error = r.json()
-            return self.error
+            return None
 
     def get_shipyard(self, system, waypoint):
-        url = self.BASE_URL + f"systems/X1-{system}/waypoints/X1-{system}-{waypoint}/shipyard"
+        url = self.BASE_URL + f"systems/{system}/waypoints/{waypoint}/shipyard"
 
         r = requests.get(url, headers=self.header)
         if r.status_code == 200:
@@ -788,10 +824,10 @@ class SpaceTrader:
             raise ResourceNotFound()
         else:
             self.error = r.json()
-            return self.error
+            return None
 
     def get_jump_gate(self, system, waypoint):
-        url = self.BASE_URL + f"systems/X1-{system}/waypoints/X1-{system}-{waypoint}/jump-gate"
+        url = self.BASE_URL + f"systems/{system}/waypoints/{waypoint}/jump-gate"
 
         r = requests.get(url, headers=self.header)
         if r.status_code == 200:
@@ -803,10 +839,138 @@ class SpaceTrader:
             raise ResourceNotFound()
         else:
             self.error = r.json()
-            return self.error
+            return None
+
+
+class Ship:
+    def __init__(self, symbol, ship_info):
+        if symbol:
+            self.symbol = symbol
+        else:
+            raise ShipSymbolNotDefined()
+
+        for key in ship_info.keys():
+            match key:
+                case "registration":
+                    self.registration = ship_info[key]
+                case "nav":
+                    self.nav = ShipNav(ship_info[key])
+                case "crew":
+                    self.crew = ship_info[key]
+                case "frame":
+                    self.frame = ship_info[key]
+                case "reactor":
+                    self.nav = ship_info[key]
+                case "engine":
+                    self.engine = ship_info[key]
+                case "modules":
+                    self.modules = ship_info[key]
+                case "mounts":
+                    self.mounts = ship_info[key]
+                case "cargo":
+                    self.nav = ship_info[key]
+                case "fuel":
+                    self.fuel = ship_info[key]
+                case _:
+                    pass
+
+    def __str__(self):
+        if self.symbol:
+            return self.symbol
+        else:
+            raise ShipSymbolNotDefined()
+
+
+class ShipNav:
+    def __init__(self, nav_info):
+        for key in nav_info.keys():
+            match key:
+                case "systemSymbol":
+                    self.system_symbol = nav_info[key]
+                case "waypointSymbol":
+                    self.waypoint_symbol = nav_info[key]
+                case "route":
+                    self.route = nav_info[key]
+                    self.destination = Waypoint(self.route["destination"])
+                    self.departure = Waypoint(self.route["departure"])
+                case "status":
+                    self.status = nav_info[key]
+                case "flightMode":
+                    self.status = nav_info[key]
+
+
+class System:
+    def __init__(self, system_info):
+        for key in system_info.keys():
+            match key:
+                case"symbol":
+                    self.symbol = system_info[key]
+                case "sectorSymbol":
+                    self.sector_symbol = system_info[key]
+                case "type":
+                    self.type = system_info[key]
+                case "x":
+                    self.x = system_info[key]
+                case "y":
+                    self.x = system_info[key]
+                case "waypoints":
+                    self.waypoints = []
+                    for wp in system_info[key]:
+                        waypoint = Waypoint(wp)
+                        self.waypoints.append(waypoint)
+                case "factions":
+                    self.factions = system_info[key]
+
+    def __str__(self):
+        return self.symbol
+
+
+class Waypoint:
+    def __init__(self, waypoint_info):
+        self.sector = "X1"
+
+        for key in waypoint_info.keys():
+            match key:
+                case "symbol":
+                    self.symbol = waypoint_info[key]
+                case "systemSymbol":
+                    self.system_symbol = waypoint_info[key]
+                case "waypoint_type":
+                    self.waypoint_type = waypoint_info[key]
+                case "x":
+                    self.x = waypoint_info[key]
+                case "y":
+                    self.y = waypoint_info[key]
+                case "orbitals":
+                    self.orbitals = waypoint_info[key]
+                case "faction":
+                    self.faction = waypoint_info[key]
+                case "traits":
+                    self.traits = waypoint_info[key]
+                case "chart":
+                    self.waypoint_type = waypoint_info[key]
+                case _:
+                    pass
+
+    def __str__(self):
+        if self.symbol:
+            return self.symbol
+        else:
+            raise WaypointValueNotSet()
 
 
 # Exceptions
+class ShipSymbolNotDefined(Exception):
+    def __init__(self):
+        self.message = "No Ship Symbol was defined"
+        super().__init__(self.message)
+
+
+class WaypointValueNotSet(Exception):
+    def __init__(self):
+        self.message = "Waypoint object has no waypoint value set"
+
+
 class NoCallsign(Exception):
     def __init__(self):
         self.message = "Callsign needed to register new agent"
